@@ -1,52 +1,29 @@
 clc;
 clear;
 close all;
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                           Copyright rules: To use the current code,                                                                   % 
 %                                                 Cite the following paper:                                                                             %                    
 %       A Multi-objective Optimization Approach for Sustainable and Personalized Trip Planning:  A Self-adaptive Evolutionary Algorithm with Case Study %
 %                                                   Expert Systems With Applications                                                                    %                                                                                                                   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %% Problem Definition
 filename='CaseStudy.xlsx';       
-
-Nh=xlsread(filename,1,'B:B');    %The total number of available hotels%
-Ns=xlsread(filename,1,'D:D');    %The total number of available scenic spots%
-Nr=xlsread(filename,1,'F:F');    %The total number of available restaurants%
-Nsr=Ns+Nr;                       %The total number of available scenic spots+restaurants%
-N=Nh+Ns+Nr;                      %The total number of nodes%
-Nv=xlsread(filename,1,'H:H');
-t=xlsread(filename,1,'J:J');     %The total number of days included in a tour %
+Nh=xlsread(filename,1,'B:B');    %The total number of available hotels (H)%
+Ns=xlsread(filename,1,'D:D');    %The total number of available scenic spots(S)%
+Nr=xlsread(filename,1,'F:F');    %The total number of available restaurants(R)%
+Nsr=Ns+Nr;                       %The total number of available scenic spots+restaurants(R+S)%
+N=Nh+Ns+Nr;                      %The total number of nodes(n)%
+Nv=xlsread(filename,1,'H:H');    %The total number of days included in a tour(T) %
+t=xlsread(filename,1,'J:J');     %The total number of days included in a tour(T) %
 %Distance (N);
 xr=xlsread(filename,1,'N:N');
 yr=xlsread(filename,1,'O:O');
-
-%Distance (N);
-numLocations = length(xr);
-dis = zeros(N);
-% Earth radius in kilometers
-R = 6371;
-% Calculate distances using the Haversine formula
-for i = 1:numLocations
-    for j = 1:numLocations
-        if i ~= j
-            lat1 = deg2rad(xr(i));
-            lon1 = deg2rad(yr(i));
-            lat2 = deg2rad(xr(j));
-            lon2 = deg2rad(yr(j));
-            
-            dlat = lat2 - lat1;
-            dlon = lon2 - lon1;
-            
-            a = sin(dlat/2)^2 + cos(lat1) * cos(lat2) * sin(dlon/2)^2;
-            c = 2 * atan2(sqrt(a), sqrt(1-a));
-            dis(i, j) = R * c; % Distance in km
-        end
+for i=1:numel(xr)
+    for j=1:numel(yr)
+        dis(i,j)=sqrt((yr(i)-yr(j))^2 + (xr(i)-xr(j))^2);
     end
 end
-
 
 %data has been given on: https://open.canada.ca/data/en/dataset/02ebdab9-cbf3-4f56-8c29-79fa0ed0ed2e
 NL=zeros(N,N);
@@ -63,82 +40,82 @@ for i=1:N
     end
     end
 end
-
 %The Lower bound of time windows to visit a place (Nsr)%  
 LTW=xlsread(filename,1,'W:W');
-
 %The Uper bound of time windows to visit a  place (Nsr)%
 UTW=xlsread(filename,1,'AA:AA');
-
 %Operational time to visite a place (Nsr)%
 OT1=xlsread(filename,1,'AE:AE');
 OT2=xlsread(filename,1,'AI:AI');
 OT3=xlsread(filename,1,'AM:AM');
-
 %Global (utility) rate of each restaurant (Nr)%
 UT=xlsread(filename,1,'AQ:AQ');
-
 %Restaurant's food & service cost (Nr)%
 RFC1=xlsread(filename,1,'AU:AU');
 RFC2=xlsread(filename,1,'AY:AY');
 RFC3=xlsread(filename,1,'BC:BC');
-
 %Global (utility) rate of each hotel (Nh)%
 UTH=xlsread(filename,1,'BG:BG');
-
 %The booking cost of each available hotel  per day per person (Nh)%
 RCH1=xlsread(filename,1,'BK:BK');
 RCH2=xlsread(filename,1,'BO:BO');
 RCH3=xlsread(filename,1,'BS:BS');
-
+%The ticket price of each listed SS  per day per person (Ns)%
+SCs=xlsread(filename,1,'DH:DH');
 %The variable cost of each vehicle for 1 unit distance%
 VC=xlsread(filename,1,'BW:BW');
-
 %The variable cost (ticket price) of each vehicle for 1 unit distance%
 FC=xlsread(filename,1,'CA:CA');
-
 %average velocity of each vehicle (km/h)%
 v_star1=xlsread(filename,1,'CE:CE');
 v_star2=xlsread(filename,1,'CI:CI');
 v_star3=xlsread(filename,1,'CM:CM');
-
 %carbon emission of each vehicle for 1 unit distance per passenger
 C=xlsread(filename,1,'CQ:CQ');
-
 %Budget%
 B=xlsread(filename,1,'CT:CT');
-
 %Departure time of visitor from the hotel%
 DT=xlsread(filename,1,'CW:CW');
 %Average waiting time at a traffic light%
 wt=xlsread(filename,1,'CZ:CZ');
 %Maximum number of trips per day=maximum number of visited SS per day%
 MT=xlsread(filename,1,'DC:DC');
-
 %% FUZZY Probabilities
 alfaOT=0.5;
 alfaRCH=0.5;
 alfaRFC=0.5;
 alfav_star=0.5;
-
 %% NSGA-II Parameters
 npop=100;
 MaxIt=100;    
 %% Number of Objective Functions
 Objectives=@(pop) objFunction(pop);      % objective Function
-nObj=3;                                            
-
+nObj=3; 
+    sol.H=[];
+    sol.S=[];
+    sol.R=[];
+    sol.SS=[];
+    sol.Lsr=[];
+    sol.V=[];
+    sol.TotalDD=[];
+    sol.TotalTCC=[];
+    sol.TotalD=[];
+    sol.TotalTC=[];
+    sol.TotalRC=[];
+    sol.TotalUTR=[];
+    sol.TotalC=[];
+    sol.TotalUT=[];
+    sol.TotalEm=[];
     sol.L=[];
     sol.Rank=[];
     sol.DominationSet=[];
     sol.DominatedCount=[];
     sol.CrowdingDistance=[];
+    sol.Objectives=[];
     sol.At=zeros(t,MT+1);
     sol.TV=zeros(t,MT+1);
     pop=repmat(sol,npop,1);
-       
 tic;
-
     LOT=(2*alfaOT-1)*OT1+(2-2*alfaOT)*OT2;
     UOT=(2-2*alfaOT)*OT2+(2*alfaOT-1)*OT3;
     LRCH=(2*alfaRCH-1)*RCH1+(2-2*alfaRCH)*RCH2;
@@ -147,10 +124,8 @@ tic;
     URFC=(2-2*alfaRFC)*RFC2+(2*alfaRFC-1)*RFC3;
     Lv_star=(2*alfav_star-1)*v_star1+(2-2*alfav_star)*v_star2;
     Uv_star=(2-2*alfav_star)*v_star2+(2*alfav_star-1)*v_star3;
-     
     npop=2*npop;
 for i=1:npop
-    
      pop(i).H=randi(Nh,1);
      pop(i).S=randperm(Ns); 
      pop(i).R=randperm(Nr);
@@ -169,7 +144,6 @@ for k=1:t
          end                 
          end
     end
-    
     if k==t
          r(t)=randi([2,numel(pop(i).SS)+1]);
          for j=1:numel(pop(i).SS)+1
@@ -183,7 +157,6 @@ for k=1:t
          end    
     end
 end
-     
 for k=1:t
     m(k)=0;
     for j=1:numel(pop(i).Lsr(k,:))
@@ -192,7 +165,6 @@ for k=1:t
     end
     end
 end 
-
 for k=1:t 
     pop(i).L(k,1)=pop(i).H; 
 for j=1:numel(pop(i).Lsr(k,:)) 
@@ -204,7 +176,6 @@ for j=1:numel(pop(i).Lsr(k,:))
      pop(i).L(k,numel(pop(i).Lsr(k,:))-m(k)+2)=pop(i).H; 
 end
 end
-
 if Nv==5
     pop(i).V=randi(Nv-1,t,numel(pop(i).L(1,:))-1);
 for k=1:t
@@ -214,11 +185,9 @@ for k=1:t
     end
   end
 end
-
 else
         pop(i).V=randi(Nv,t,numel(pop(i).L(1,:))-1);
 end
-
 for k=1:t
   for j=1:numel(pop(i).Lsr(k,:))-m(k)  
       if j==1 && pop(i).V(k,j)~=4
@@ -233,11 +202,9 @@ for k=1:t
       elseif j>1  && pop(i).V(k,j)==4  
    pop(i).At(k,j)=pop(i).TV(k,j-1)+ (dis(pop(i).L(k,j),pop(i).L(k,j+1))/Uv_star(pop(i).V(k,j))); 
    pop(i).TV(k,j)=pop(i).At(k,j)+ UOT(pop(i).Lsr(k,j)); 
-
       end
   end
 end
-
     for k=1:t  
     for j=1:numel(pop(i).Lsr(k,:))-m(k) 
     if pop(i).At(k,j)<LTW(j) 
@@ -247,7 +214,6 @@ end
     end
     end
     end
-    
 if ~isempty(pop(i).L(:,:))
 for k=1:t
     for j=1:numel(pop(i).Lsr(k,:))-m(k)+1
@@ -265,17 +231,13 @@ for k=1:t
    pop(i).TotalD=sum(pop(i).TotalD(:));
    pop(i).TotalTC=sum(pop(i).TotalTC(:));
 end
-
 for k=1:t
 pop(i).TotalRC(k)= URFC(pop(i).R(k));
 pop(i).TotalUTR(k)=UT(pop(i).R(k));
 end
-
 pop(i).TotalRC=sum(pop(i).TotalRC);
 pop(i).TotalUTR=sum(pop(i).TotalUTR);
-
-pop(i).TotalC=t*URCH(pop(i).L(1,1))+ pop(i).TotalTC + pop(i).TotalRC;
-
+pop(i).TotalC=t*URCH(pop(i).L(1,1))+ pop(i).TotalTC + pop(i).TotalRC+SCs;
 if pop(i).TotalC<=B
 pop(i).TotalC=pop(i).TotalC;
 pop(i).TotalUT=t*UTH(pop(i).L(1))+pop(i).TotalUTR;
@@ -286,7 +248,6 @@ pop(i).TotalEm=sum(pop(i).TotalEm);
 else
 pop(i).L=[]; 
 end
-
 if ~isempty(pop(i).L)
 pop(i).Objectives=objFunction(pop(i));  
 end     
@@ -298,7 +259,6 @@ pop(i)=[];
 end
 end
 npop=numel(pop);
-
 for i=1:numel(pop)-1
     for j=numel(pop):-1:i
         if pop(i).TotalC==pop(j).TotalC
@@ -314,7 +274,6 @@ f3min=pop(1).TotalEm;
 f1max=0;
 f2max=0;
 f3max=0;
-
 for i=1:npop
     if pop(i).TotalC<f1min
    f1min=pop(i).TotalC;
@@ -335,18 +294,14 @@ for i=1:npop
    f3max=pop(i).TotalEm;
     end
 end
-
-
 for i=1:npop
    f1(i)= (f1max-pop(i).TotalC)/(f1max-f1min);
    f2(i)= (f2max-pop(i).TotalUT)/(f2max-f2min);
    f3(i)= (f3max-pop(i).TotalEm)/(f3max-f3min);
 end
-
 f1m=f1(1)-pop(1).TotalC;
 f2m=f2(1)-pop(1).TotalUT;
 f3m=f3(1)-pop(1).TotalEm;
-
 for i=1:npop
   if  f1(i)-pop(i).TotalC<f1m
      f1m= f1(i)-pop(i).TotalC;
@@ -358,7 +313,6 @@ for i=1:npop
      f3m= f3(i)-pop(i).TotalEm;
   end
 end
-
 sigma1=0;
 sigma2=0;
 sigma3=0;
@@ -372,73 +326,52 @@ sigma2=(sigma2/npop);
 sigma3=(sigma3/npop);
 k=0.6640625;
 g=0.3203125;
-
 pCrossover=k*cos((pi/2)*(1/(exp(sigma1+sigma2+sigma3))));
-nCrossover=2*round(pCrossover*npop/2);      % Number of Offspring
-
+nCrossover=2*round(pCrossover*npop/2);      % Number of Offsprings
 pMutation=1;
 for i=1:npop
 pMutation=pMutation+((f1(i)/f1m)*(f2(i)/f2m)*(f3(i)/f3m));
 end
 pMutation=g*pMutation;
 nMutation=round(pMutation*npop); 
-
-%%%%%%%%%%%%%
-
+%%
 % Non-Dominated Sorting
 [pop, F]=NonDominatedSorting(pop);
-
 % Calculate Crowding Distance
 pop=CalcCrowdingDistance(pop,F);
-
 % Sort Population
 [pop, F]=SortPopulation(pop);
-
- 
 %% NSGA-II Main Loop
-
 for it=1:MaxIt
 %% Crossover
 popc=repmat(sol,nCrossover,2);
-
  for i=1:nCrossover/2 
-  
 k=randi(npop);
 f=randi(npop);
-
 popc(i,1).H=pop(i).H;
 popc(i,2).H=pop(i).H;
-
 popc(i,1).S=pop(k).S;
 popc(i,2).S=pop(f).S;
-
 popc(i,1).R=randperm(Nr);
 popc(i,2).R=pop(i).R(1:t);  
-
 r1=randi([1,MT-1]);
 r2=randi([1,MT-r1]);
-
 popc(i,1).SS=popc(i,1).S;
 popc(i,2).SS=popc(i,2).S;
-
 if Ns-1>2
 r=randi([2 Ns-1]);
 else
 r=2;    
 end
-
 popc(i,1).S(1:r)=pop(f).S(1:r);
 popc(i,2).S(1:r)=pop(k).S(1:r);
-
 for h=1:2
 popc(i,h).S=unique(popc(i,h).S);
 if numel(popc(i,h).S)<Ns
    popc(i,h).S=(1:Ns); 
 end
 end
-
 for h=1:2 
-    
 for k=1:t
     if k<t
          r(k)=randi([2,MT]);                   
@@ -452,7 +385,6 @@ for k=1:t
          end                 
          end
     end
-    
     if k==t
          r(t)=randi([2,numel(popc(i,h).SS)+1]);
          for j=1:numel(popc(i,h).SS)+1
@@ -465,7 +397,6 @@ for k=1:t
          end                 
          end    
     end
-     
 end
 for k=1:t
     m(k)=0;
@@ -475,7 +406,6 @@ for k=1:t
     end
     end
 end 
-
 for k=1:t 
     popc(i,h).L(k,1)=popc(i,h).H; 
 for j=1:numel(popc(i,h).Lsr(k,:)) 
@@ -487,7 +417,6 @@ for j=1:numel(popc(i,h).Lsr(k,:))
     popc(i,h).L(k,numel(popc(i,h).Lsr(k,:))-m(k)+2)=popc(i,h).H; 
 end
 end
-
 if Nv==5
     popc(i,h).V=randi(Nv-1,t,numel(popc(i,h).L(1,:))-1);
 for k=1:t
@@ -497,11 +426,9 @@ for k=1:t
     end
   end
 end
-
 else
     popc(i,h).V=randi(Nv,t,numel(popc(i,h).L(1,:))-1);    
 end
-
 for k=1:t
   for j=1:numel(popc(i,h).Lsr(k,:))-m(k)  
       if j==1 && popc(i,h).V(k,j)~=4
@@ -516,15 +443,9 @@ for k=1:t
       elseif j>1  && popc(i,h).V(k,j)==4  
    popc(i,h).At(k,j)=popc(i,h).TV(k,j-1)+ (dis(popc(i,h).L(k,j),popc(i,h).L(k,j+1))/Uv_star(popc(i,h).V(k,j))); 
    popc(i,h).TV(k,j)=popc(i,h).At(k,j)+ UOT(popc(i,h).Lsr(k,j)); 
-
       end
   end
 end
-
-
-
-
-
     for k=1:t  
     for j=1:numel(popc(i,h).Lsr(k,:))-m(k) 
     if popc(i,h).At(k,j)<LTW(j) 
@@ -534,7 +455,6 @@ end
     end
     end
     end
-    
 if ~isempty(popc(i,h).L(:,:))
 for k=1:t
     for j=1:numel(popc(i,h).Lsr(k,:))-m(k)+1
@@ -552,17 +472,13 @@ for k=1:t
    popc(i,h).TotalD=sum(popc(i,h).TotalD(:));
    popc(i,h).TotalTC=sum(popc(i,h).TotalTC(:));
 end
-
 for k=1:t
 popc(i,h).TotalRC(k)= URFC(popc(i,h).R(k));
 popc(i,h).TotalUTR(k)=UT(popc(i,h).R(k));
 end
-
 popc(i,h).TotalRC=sum(popc(i,h).TotalRC);
 popc(i,h).TotalUTR=sum(popc(i,h).TotalUTR);
-
-popc(i,h).TotalC=t*URCH(popc(i,h).L(1,1))+ popc(i,h).TotalTC + popc(i,h).TotalRC;
-
+popc(i,h).TotalC=t*URCH(popc(i,h).L(1,1))+ popc(i,h).TotalTC + popc(i,h).TotalRC+SCs;
 if popc(i,h).TotalC<=B
 popc(i,h).TotalC=popc(i,h).TotalC;
 popc(i,h).TotalUT=t*UTH(popc(i,h).L(1))+popc(i,h).TotalUTR;
@@ -573,34 +489,25 @@ popc(i,h).TotalEm=sum(popc(i,h).TotalEm);
 else
 popc(i,h).L=[]; 
 end
-
 if ~isempty(popc(i,h).L)
 popc(i,h).Objectives=objFunction(popc(i,h));  
 end
-
-      
 end
 end
-
 end
-
     popc=popc(:);
-    
 for i=nCrossover :-1:1
 if isempty(popc(i).L)
 popc(i)=[];
 end
 end
 nCrossover=numel(popc);
-
 for i=nCrossover :-1:1
 if isempty(popc(i).Objectives)
 popc(i)=[];
 end
 end
 nCrossover=numel(popc);
-
-
 for i=1:numel(popc)-1
     for j=numel(popc):-1:i
         if popc(i).TotalC==popc(j).TotalC
@@ -608,34 +515,24 @@ for i=1:numel(popc)-1
         end
     end
 end
-
 nCrossover=numel(pop);
-
 %%%%
-
      %% Mutation
      popm=repmat(sol,nMutation,1);
-
 for i=1:nMutation 
-    
 r=randi(npop);
 popm(i).H=pop(r).H;
 popm(i).S=pop(r).S;
 popm(i).R=pop(i).R;
-% popm(i).V(:,:)=pop(i).V(:,:);
-
-
 a=randi([2 Ns]);
 b=randi([2 Ns]);
 c=popm(i).S(b);
 d=popm(i).S(a);
-
 popm(i).S(a)=c;
 popm(i).S(b)=d;
      r1=randi([1,MT-1]);
      r2=randi([1,MT-r1]);
      popm(i).SS=popm(i).S;
-
 for k=1:t
     if k<t
          r(k)=randi([2,MT]);                   
@@ -649,7 +546,6 @@ for k=1:t
          end                 
          end
     end
-    
     if k==t
          r(t)=randi([2,numel(popm(i).SS)+1]);
          for j=1:numel(popm(i).SS)+1
@@ -663,7 +559,6 @@ for k=1:t
          end    
     end
 end
-     
 for k=1:t
     m(k)=0;
     for j=1:numel(popm(i).Lsr(k,:))
@@ -672,7 +567,6 @@ for k=1:t
     end
     end
 end
-
 for k=1:t 
     popm(i).L(k,1)=popm(i).H; 
 for j=1:numel(popm(i).Lsr(k,:)) 
@@ -684,7 +578,6 @@ for j=1:numel(popm(i).Lsr(k,:))
      popm(i).L(k,numel(popm(i).Lsr(k,:))-m(k)+2)=popm(i).H; 
 end
 end
-
 if Nv==5
     popm(i).V=randi(Nv-1,t,numel(popm(i).L(1,:))-1);
 for k=1:t
@@ -694,7 +587,6 @@ for k=1:t
     end
   end
 end
-
 else
     popm(i).V=randi(Nv,t,numel(popm(i).L(1,:))-1);    
 end
@@ -715,7 +607,6 @@ for k=1:t
       end
   end
 end
-
     for k=1:t  
     for j=1:numel(popm(i).Lsr(k,:))-m(k) 
     if popm(i).At(k,j)<LTW(j) 
@@ -725,7 +616,6 @@ end
     end
     end
     end
-    
 if ~isempty(popm(i).L(:,:))
 for k=1:t
     for j=1:numel(popm(i).Lsr(k,:))-m(k)+1
@@ -743,17 +633,13 @@ for k=1:t
    popm(i).TotalD=sum(popm(i).TotalD(:));
    popm(i).TotalTC=sum(popm(i).TotalTC(:));
 end
-
 for k=1:t
 popm(i).TotalRC(k)= URFC(popm(i).R(k));
 popm(i).TotalUTR(k)=UT(popm(i).R(k));
 end
-
 popm(i).TotalRC=sum(popm(i).TotalRC);
 popm(i).TotalUTR=sum(popm(i).TotalUTR);
-
-popm(i).TotalC=t*URCH(popm(i).L(1,1))+ popm(i).TotalTC + popm(i).TotalRC;
-
+popm(i).TotalC=t*URCH(popm(i).L(1,1))+ popm(i).TotalTC + popm(i).TotalRC+SCs;
 if popm(i).TotalC<=B
 popm(i).TotalC=popm(i).TotalC;
 popm(i).TotalUT=t*UTH(popm(i).L(1))+popm(i).TotalUTR;
@@ -764,25 +650,18 @@ popm(i).TotalEm=sum(popm(i).TotalEm);
 else
 popm(i).L=[]; 
 end
-
 if ~isempty(popm(i).L)
 popm(i).Objectives=objFunction(popm(i));  
 end
-
-      
 end
-
 end
  popm=popm(:);
-
- 
 for i=nMutation :-1:1
 if isempty(popm(i).L)
 popm(i)=[];
 end
 end
 nMutation=numel(popm);
-
 for i=1:numel(popm)-1
     for j=numel(popm):-1:i
         if popm(i).TotalC==popm(j).TotalC
@@ -790,51 +669,34 @@ for i=1:numel(popm)-1
         end
     end
 end
-
     pop=[pop
         popc
          popm];
-     
-
-     
     toc;
-     
     % Non-Dominated Sorting
     [pop ,F]=NonDominatedSorting(pop);
-
     % Calculate Crowding Distance
     pop=CalcCrowdingDistance(pop,F);
-
     % Sort Population
     [pop ,F]=SortPopulation(pop);
-    
     % Truncate
     pop=pop(1:npop);
-    
     % Non-Dominated Sorting
     [pop, F]=NonDominatedSorting(pop);
-
     % Calculate Crowding Distance
     pop=CalcCrowdingDistance(pop,F);
-
     % Sort Population
     [pop, F]=SortPopulation(pop);
-     
     % Store F1
      F1=pop(F{1});
-    
     % Show Iteration Information
     disp(['Iteration ' num2str(it) ': Number of F1 Members = ' num2str(numel(F1))]);
-    
     % Plot F1 Costs
      figure(1);
     PlotObjs(F1);
-
 end
 %% Results
 pareto=pop(F{1},:);
-
-
 for i=1:numel(pareto)-1
     for j=numel(pareto):-1:i+1
         if pareto(i).TotalC==pareto(j).TotalC
@@ -842,4 +704,3 @@ for i=1:numel(pareto)-1
         end
     end
 end
-
