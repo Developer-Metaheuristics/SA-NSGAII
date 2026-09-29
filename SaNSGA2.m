@@ -2,7 +2,6 @@ clc;
 clear;
 close all;
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                           Copyright rules: To use the current code,                                                                   % 
 %                                                 Cite the following paper:                                                                             %                    
@@ -13,22 +12,41 @@ close all;
 %% Problem Definition
 filename='CaseStudy.xlsx';       
 
-Nh=xlsread(filename,1,'B:B');    %The total number of available hotels (H)%
-Ns=xlsread(filename,1,'D:D');    %The total number of available scenic spots(S)%
-Nr=xlsread(filename,1,'F:F');    %The total number of available restaurants(R)%
-Nsr=Ns+Nr;                       %The total number of available scenic spots+restaurants(R+S)%
-N=Nh+Ns+Nr;                      %The total number of nodes(n)%
-Nv=xlsread(filename,1,'H:H');    %The total number of days included in a tour(T) %
-t=xlsread(filename,1,'J:J');     %The total number of days included in a tour(T) %
+Nh=xlsread(filename,1,'B:B');    %The total number of available hotels%
+Ns=xlsread(filename,1,'D:D');    %The total number of available scenic spots%
+Nr=xlsread(filename,1,'F:F');    %The total number of available restaurants%
+Nsr=Ns+Nr;                       %The total number of available scenic spots+restaurants%
+N=Nh+Ns+Nr;                      %The total number of nodes%
+Nv=xlsread(filename,1,'H:H');
+t=xlsread(filename,1,'J:J');     %The total number of days included in a tour %
 %Distance (N);
 xr=xlsread(filename,1,'N:N');
 yr=xlsread(filename,1,'O:O');
 
-for i=1:numel(xr)
-    for j=1:numel(yr)
-        dis(i,j)=sqrt((yr(i)-yr(j))^2 + (xr(i)-xr(j))^2);
+%Distance (N);
+numLocations = length(xr);
+dis = zeros(N);
+% Earth radius in kilometers
+R = 6371;
+% Calculate distances using the Haversine formula
+for i = 1:numLocations
+    for j = 1:numLocations
+        if i ~= j
+            lat1 = deg2rad(xr(i));
+            lon1 = deg2rad(yr(i));
+            lat2 = deg2rad(xr(j));
+            lon2 = deg2rad(yr(j));
+            
+            dlat = lat2 - lat1;
+            dlon = lon2 - lon1;
+            
+            a = sin(dlat/2)^2 + cos(lat1) * cos(lat2) * sin(dlon/2)^2;
+            c = 2 * atan2(sqrt(a), sqrt(1-a));
+            dis(i, j) = R * c; % Distance in km
+        end
     end
 end
+
 
 %data has been given on: https://open.canada.ca/data/en/dataset/02ebdab9-cbf3-4f56-8c29-79fa0ed0ed2e
 NL=zeros(N,N);
@@ -72,8 +90,6 @@ UTH=xlsread(filename,1,'BG:BG');
 RCH1=xlsread(filename,1,'BK:BK');
 RCH2=xlsread(filename,1,'BO:BO');
 RCH3=xlsread(filename,1,'BS:BS');
-%The ticket price of each listed SS  per day per person (Ns)%
-SCs=xlsread(filename,1,'DH:DH');
 
 %The variable cost of each vehicle for 1 unit distance%
 VC=xlsread(filename,1,'BW:BW');
@@ -258,7 +274,7 @@ end
 pop(i).TotalRC=sum(pop(i).TotalRC);
 pop(i).TotalUTR=sum(pop(i).TotalUTR);
 
-pop(i).TotalC=t*URCH(pop(i).L(1,1))+ pop(i).TotalTC + pop(i).TotalRC+SCs;
+pop(i).TotalC=t*URCH(pop(i).L(1,1))+ pop(i).TotalTC + pop(i).TotalRC;
 
 if pop(i).TotalC<=B
 pop(i).TotalC=pop(i).TotalC;
@@ -358,7 +374,7 @@ k=0.6640625;
 g=0.3203125;
 
 pCrossover=k*cos((pi/2)*(1/(exp(sigma1+sigma2+sigma3))));
-nCrossover=2*round(pCrossover*npop/2);      % Number of Offsprings
+nCrossover=2*round(pCrossover*npop/2);      % Number of Offspring
 
 pMutation=1;
 for i=1:npop
@@ -366,7 +382,8 @@ pMutation=pMutation+((f1(i)/f1m)*(f2(i)/f2m)*(f3(i)/f3m));
 end
 pMutation=g*pMutation;
 nMutation=round(pMutation*npop); 
-%%
+
+%%%%%%%%%%%%%
 
 % Non-Dominated Sorting
 [pop, F]=NonDominatedSorting(pop);
@@ -544,7 +561,7 @@ end
 popc(i,h).TotalRC=sum(popc(i,h).TotalRC);
 popc(i,h).TotalUTR=sum(popc(i,h).TotalUTR);
 
-popc(i,h).TotalC=t*URCH(popc(i,h).L(1,1))+ popc(i,h).TotalTC + popc(i,h).TotalRC+SCs;
+popc(i,h).TotalC=t*URCH(popc(i,h).L(1,1))+ popc(i,h).TotalTC + popc(i,h).TotalRC;
 
 if popc(i,h).TotalC<=B
 popc(i,h).TotalC=popc(i,h).TotalC;
@@ -605,6 +622,8 @@ r=randi(npop);
 popm(i).H=pop(r).H;
 popm(i).S=pop(r).S;
 popm(i).R=pop(i).R;
+% popm(i).V(:,:)=pop(i).V(:,:);
+
 
 a=randi([2 Ns]);
 b=randi([2 Ns]);
@@ -733,7 +752,7 @@ end
 popm(i).TotalRC=sum(popm(i).TotalRC);
 popm(i).TotalUTR=sum(popm(i).TotalUTR);
 
-popm(i).TotalC=t*URCH(popm(i).L(1,1))+ popm(i).TotalTC + popm(i).TotalRC+SCs;
+popm(i).TotalC=t*URCH(popm(i).L(1,1))+ popm(i).TotalTC + popm(i).TotalRC;
 
 if popm(i).TotalC<=B
 popm(i).TotalC=popm(i).TotalC;
